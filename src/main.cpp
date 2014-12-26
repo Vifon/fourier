@@ -71,6 +71,42 @@ std::vector<double> calculate_function(const std::function<double(double)> fun,
     return std::move(combined_values);
 }
 
+
+// Workaround for the Allegro limitations.
+//
+// Note: tested only with `points_stride == 2*sizeof(point)` i.e. just
+// the points array, without additional data within.
+void draw_fuckin_long_ribbon(const float* points, int points_stride,
+                             ALLEGRO_COLOR color, float thickness,
+                             int num_segments)
+{
+    while (num_segments*2 >= ALLEGRO_VERTEX_CACHE_SIZE) {
+        al_draw_ribbon(points, points_stride, color, thickness, ALLEGRO_VERTEX_CACHE_SIZE/2);
+        points += ALLEGRO_VERTEX_CACHE_SIZE - 2;
+        num_segments -= ALLEGRO_VERTEX_CACHE_SIZE/2 - 1;
+    }
+    al_draw_ribbon(points, points_stride, color, thickness, num_segments);
+}
+
+std::vector<float> values_to_points(const std::vector<double>& values,
+                                    std::function<float(double)> x_transform,
+                                    std::function<float(double)> y_transform)
+{
+    std::vector<float> points;
+    points.reserve(values.size()*2);
+
+    unsigned int x = 0;
+
+    for (auto y : values) {
+        points.push_back(x_transform(x));
+        points.push_back(y_transform(y));
+
+        ++x;
+    }
+
+    return points;
+}
+
 void redraw_functions(const std::vector<unsigned int>& frequencies,
                       const size_t selected,
                       const std::function<double(double)> fun)
@@ -97,15 +133,21 @@ void redraw_functions(const std::vector<unsigned int>& frequencies,
                                             combined_values.end());
     double combined_min = *std::min_element(combined_values.begin(),
                                             combined_values.end());
-    unsigned int x = 0;
-    // Draw the combined function.
-    for (auto y : combined_values) {
-        // Function negated because the coordinates are inverted.
-        y = scale_function(-y, FUNCTION_HEIGHT, combined_min, combined_max);
 
-        al_put_pixel(x + XMARGIN, y + YMARGIN, FUNCTION_COLOR);
-        ++x;
-    }
+    // Draw the combined function.
+    draw_fuckin_long_ribbon(
+        std::move(values_to_points(
+            combined_values,
+            [=](double x){
+                return x + XMARGIN;
+            },
+            [=](double y){
+                // Value with a minus because the coordinates are inverted.
+                return scale_function(-y, FUNCTION_HEIGHT,
+                                      combined_min, combined_max) + YMARGIN;
+            }))
+        .data(),
+        sizeof(float)*2, FUNCTION_COLOR, 1, combined_values.size());
 
     // Draw the individual functions.
     for (int i = 0; i < frequencies.size(); ++i) {
@@ -114,15 +156,20 @@ void redraw_functions(const std::vector<unsigned int>& frequencies,
                                          0, 2*M_PI,
                                          SUBFUNCTION_WIDTH,
                                          frequencies[i]));
-        size_t x = 0;
-        for (auto y : function_values) {
-            y = scale_function(-y, SUBFUNCTION_HEIGHT, -1, 1) + SUBFUNCTION_YMARGIN;
 
-            al_put_pixel(x + XMARGIN + i*(SUBFUNCTION_WIDTH + SUBFUNCTION_XMARGIN),
-                         y,
-                         FUNCTION_COLOR);
-            ++x;
-        }
+        draw_fuckin_long_ribbon(
+            std::move(values_to_points(
+                          function_values,
+                          [=](double x){
+                              return x + XMARGIN + i*(SUBFUNCTION_WIDTH + SUBFUNCTION_XMARGIN);
+                          },
+                          [=](double y){
+                              // Value with a minus because the coordinates are inverted.
+                              return scale_function(-y, SUBFUNCTION_HEIGHT,
+                                                    -1, 1) + SUBFUNCTION_YMARGIN;
+                          }))
+            .data(),
+            sizeof(float)*2, FUNCTION_COLOR, 1, function_values.size());
     }
 }
 
