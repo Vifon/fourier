@@ -64,7 +64,7 @@ std::vector<double> calculate_function(const std::function<double(double)> fun,
     double range = end - begin;
 
     int i = 0;
-    for (int x = begin; x < steps; ++x) {
+    for (size_t x = begin; x < steps; ++x) {
         combined_values[i++] = fun(x*frequency_multiplier * (range / steps));
     }
 
@@ -108,7 +108,6 @@ std::vector<float> values_to_points(const std::vector<double>& values,
 }
 
 void redraw_functions(const std::vector<unsigned int>& frequencies,
-                      const size_t selected,
                       const std::function<double(double)> fun)
 {
     // Vector of vectors with functions' values.
@@ -150,7 +149,7 @@ void redraw_functions(const std::vector<unsigned int>& frequencies,
         sizeof(float)*2, FUNCTION_COLOR, 1, combined_values.size());
 
     // Draw the individual functions.
-    for (int i = 0; i < frequencies.size(); ++i) {
+    for (size_t i = 0; i < frequencies.size(); ++i) {
         std::vector<double> function_values =
             std::move(calculate_function(fun,
                                          0, 2*M_PI,
@@ -240,11 +239,13 @@ int main(int argc, char *argv[])
         switch (doredraw) {
         case REDRAW_ALL:
             al_clear_to_color(background_color);
-            redraw_functions(frequencies, selected, sin);
+            redraw_functions(frequencies, sin);
         case REDRAW_BORDERS:
             redraw_borders(frequencies.size(), selected);
             al_flip_display();
             doredraw = REDRAW_NONE;
+            break;
+        case REDRAW_NONE:
             break;
         }
 
