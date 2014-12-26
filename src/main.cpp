@@ -176,10 +176,10 @@ void redraw_functions(const std::vector<unsigned int>& frequencies,
 void redraw_borders(const size_t function_count, const size_t selected)
 {
     // Combined function's border.
-    al_draw_rectangle(XMARGIN,
-                      YMARGIN,
-                      XMARGIN + FUNCTION_WIDTH + 2,
-                      YMARGIN + FUNCTION_HEIGHT + 2,
+    al_draw_rectangle(XMARGIN - 1,
+                      YMARGIN - 1,
+                      XMARGIN + FUNCTION_WIDTH + 1,
+                      YMARGIN + FUNCTION_HEIGHT + 1,
                       al_map_rgb(0x00, 0x00, 0xAA), 1);
 
     // Individual functions' borders.
@@ -192,15 +192,16 @@ void redraw_borders(const size_t function_count, const size_t selected)
         }
 
         al_draw_rectangle(XMARGIN
-                          + i*(SUBFUNCTION_WIDTH + SUBFUNCTION_XMARGIN),
+                          + i*(SUBFUNCTION_WIDTH + SUBFUNCTION_XMARGIN) - 1,
 
-                          SUBFUNCTION_YMARGIN,
+                          SUBFUNCTION_YMARGIN - 1,
 
                           XMARGIN
                           + i*(SUBFUNCTION_WIDTH + SUBFUNCTION_XMARGIN)
-                          + SUBFUNCTION_WIDTH + 2,
+                          + SUBFUNCTION_WIDTH + 1,
 
-                          SUBFUNCTION_YMARGIN + SUBFUNCTION_HEIGHT + 2,
+                          SUBFUNCTION_YMARGIN + SUBFUNCTION_HEIGHT + 1,
+
                           border_color, 1);
     }
 }
