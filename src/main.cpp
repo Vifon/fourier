@@ -127,10 +127,10 @@ void draw_function(const std::vector<double> values,
                    const ALLEGRO_COLOR color,
                    const float thickness)
 {
-    double combined_max = *std::max_element(values.begin(),
-                                            values.end());
-    double combined_min = *std::min_element(values.begin(),
-                                            values.end());
+    double max = *std::max_element(values.begin(),
+                                   values.end());
+    double min = *std::min_element(values.begin(),
+                                   values.end());
 
     draw_fuckin_long_ribbon(
         std::move(values_to_points(
@@ -141,7 +141,7 @@ void draw_function(const std::vector<double> values,
                       [=](double y){
                           return scale_function(
                               y, height,
-                              combined_min, combined_max) + y_start;
+                              min, max) + y_start;
                       }))
         .data(),
         sizeof(float)*2, color, thickness, values.size());
