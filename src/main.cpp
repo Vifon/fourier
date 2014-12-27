@@ -25,11 +25,16 @@
 #include <vector>
 
 #include <cmath>
+#include <cstdlib>
+#include <ctime>
 
 
 const int SCREEN_W = 1280;
 const int SCREEN_H =  700;
+
 ALLEGRO_COLOR FUNCTION_COLOR;
+ALLEGRO_COLOR SUBFUNCTION_COLOR;
+ALLEGRO_COLOR RANDOM_FUNCTION_COLOR;
 
 
 const int XMARGIN = 60;
@@ -107,8 +112,10 @@ std::vector<float> values_to_points(const std::vector<double>& values,
     return points;
 }
 
-void redraw_functions(const std::vector<unsigned int>& frequencies,
-                      const std::function<double(double)> fun)
+void redraw_combined_function(const std::vector<unsigned int>& frequencies,
+                              const std::function<double(double)> fun,
+                              const ALLEGRO_COLOR color,
+                              const float thickness)
 {
     // Vector of vectors with functions' values.
     std::vector<std::vector<double>> functions(frequencies.size());
@@ -136,18 +143,24 @@ void redraw_functions(const std::vector<unsigned int>& frequencies,
     // Draw the combined function.
     draw_fuckin_long_ribbon(
         std::move(values_to_points(
-            combined_values,
-            [=](double x){
-                return x + XMARGIN;
-            },
-            [=](double y){
-                // Value with a minus because the coordinates are inverted.
-                return scale_function(-y, FUNCTION_HEIGHT,
-                                      combined_min, combined_max) + YMARGIN;
-            }))
+                      combined_values,
+                      [=](double x){
+                          return x + XMARGIN;
+                      },
+                      [=](double y){
+                          // Value with a minus because the coordinates are inverted.
+                          return scale_function(-y, FUNCTION_HEIGHT,
+                                                combined_min, combined_max) + YMARGIN;
+                      }))
         .data(),
-        sizeof(float)*2, FUNCTION_COLOR, 1, combined_values.size());
+        sizeof(float)*2, color, thickness, combined_values.size());
+}
 
+void redraw_subfunctions(const std::vector<unsigned int>& frequencies,
+                         const std::function<double(double)> fun,
+                         const ALLEGRO_COLOR color,
+                         const float thickness)
+{
     // Draw the individual functions.
     for (size_t i = 0; i < frequencies.size(); ++i) {
         std::vector<double> function_values =
@@ -168,8 +181,19 @@ void redraw_functions(const std::vector<unsigned int>& frequencies,
                                                     -1, 1) + SUBFUNCTION_YMARGIN;
                           }))
             .data(),
-            sizeof(float)*2, FUNCTION_COLOR, 1, function_values.size());
+            sizeof(float)*2, color, thickness, function_values.size());
     }
+}
+
+void redraw_functions(const std::vector<unsigned int>& frequencies,
+                      const std::vector<unsigned int>& random_frequencies,
+                      const std::function<double(double)> fun)
+{
+    if (!random_frequencies.empty()) {
+        redraw_combined_function(random_frequencies, fun, RANDOM_FUNCTION_COLOR, 2);
+    }
+    redraw_combined_function(frequencies, fun, FUNCTION_COLOR, 3);
+    redraw_subfunctions(frequencies, fun, SUBFUNCTION_COLOR, 1);
 }
 
 void redraw_borders(const size_t function_count, const size_t selected)
@@ -214,6 +238,8 @@ enum redraw_t
 
 int main(int argc, char *argv[])
 {
+    srand(time(0));
+
     ALLEGRO_DISPLAY* display;
     ALLEGRO_EVENT_QUEUE* event_queue;
 
@@ -228,18 +254,21 @@ int main(int argc, char *argv[])
     event_queue = al_create_event_queue();
     ALLEGRO_COLOR background_color = al_map_rgb(0x11, 0x11, 0x11);
     FUNCTION_COLOR = al_map_rgb(0xFF, 0x00, 0x00);
+    SUBFUNCTION_COLOR = al_map_rgb(0xFF, 0x00, 0x00);
+    RANDOM_FUNCTION_COLOR = al_map_rgb(0x00, 0xAA, 0xAA);
     al_register_event_source(event_queue, al_get_keyboard_event_source());
     al_register_event_source(event_queue, al_get_display_event_source(display));
 
     std::vector<unsigned int> frequencies = {1,0,0,0};
     size_t selected = 0;
+    std::vector<unsigned int> random_frequencies;
 
     while (doexit == false) {
         // Redrawing
         switch (doredraw) {
         case REDRAW_ALL:
             al_clear_to_color(background_color);
-            redraw_functions(frequencies, sin);
+            redraw_functions(frequencies, random_frequencies, sin);
         case REDRAW_BORDERS:
             redraw_borders(frequencies.size(), selected);
             al_flip_display();
@@ -260,12 +289,15 @@ int main(int argc, char *argv[])
         } else if (ev.type == ALLEGRO_EVENT_KEY_CHAR) {
             int key = ev.keyboard.keycode;
 
+            // set frequency
             if (key >= ALLEGRO_KEY_0
                 && key <= ALLEGRO_KEY_9) {
 
                 doredraw = REDRAW_ALL;
                 frequencies[selected] = key - ALLEGRO_KEY_0;
-            } else if (key == ALLEGRO_KEY_LEFT) {
+            }
+            // select the function to modify
+            else if (key == ALLEGRO_KEY_LEFT) {
                 if (selected > 0) {
                     doredraw = REDRAW_BORDERS;
                     --selected;
@@ -275,7 +307,25 @@ int main(int argc, char *argv[])
                     doredraw = REDRAW_BORDERS;
                     ++selected;
                 }
-            } else if (key == ALLEGRO_KEY_Q) {
+            }
+            else if (key == ALLEGRO_KEY_R) {
+                doredraw = REDRAW_ALL;
+                // disable the random function
+                if (ev.keyboard.modifiers & ALLEGRO_KEYMOD_SHIFT) {
+                    random_frequencies.clear();
+                } else if (ev.keyboard.modifiers & ALLEGRO_KEYMOD_CTRL) {
+                    frequencies = {1,0,0,0};
+                }
+                // generate a new random function
+                else {
+                    random_frequencies.clear();
+                    for (int i = 0; i < frequencies.size(); ++i) {
+                        random_frequencies.push_back(rand() % 9 + 1);
+                    }
+                }
+            }
+            // quit
+            else if (key == ALLEGRO_KEY_Q) {
                 doexit = true;
             }
         }
