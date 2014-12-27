@@ -23,6 +23,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <map>
 #include <sstream>
 #include <vector>
 
@@ -116,15 +117,15 @@ std::vector<float> values_to_points(const std::vector<double>& values,
 }
 
 void redraw_combined_function(const std::vector<unsigned int>& frequencies,
-                              const std::function<double(double)> fun,
+                              const std::vector<std::function<double(double)>>& functions,
                               const ALLEGRO_COLOR color,
                               const float thickness)
 {
     // Vector of vectors with functions' values.
-    std::vector<std::vector<double>> functions(frequencies.size());
-    for (size_t i = 0; i < functions.size(); ++i) {
-        functions[i] = std::move(
-            calculate_function(fun,
+    std::vector<std::vector<double>> functions_values(frequencies.size());
+    for (size_t i = 0; i < functions_values.size(); ++i) {
+        functions_values[i] = std::move(
+            calculate_function(functions[i],
                                0, 2*M_PI,
                                FUNCTION_WIDTH,
                                frequencies[i]));
@@ -132,9 +133,9 @@ void redraw_combined_function(const std::vector<unsigned int>& frequencies,
     // Values of functions from the previous vectors added together
     // (like the zip higher order function).
     std::vector<double> combined_values(FUNCTION_WIDTH, 0);
-    for (auto& function_values : functions) {
+    for (auto& function_values : functions_values) {
         for (size_t i = 0; i < function_values.size(); ++i) {
-            combined_values[i] += function_values[i];
+            combined_values[i] -= function_values[i];
         }
     }
 
@@ -151,8 +152,7 @@ void redraw_combined_function(const std::vector<unsigned int>& frequencies,
                           return x + XMARGIN;
                       },
                       [=](double y){
-                          // Value with a minus because the coordinates are inverted.
-                          return scale_function(-y, FUNCTION_HEIGHT,
+                          return scale_function(y, FUNCTION_HEIGHT,
                                                 combined_min, combined_max) + YMARGIN;
                       }))
         .data(),
@@ -160,18 +160,24 @@ void redraw_combined_function(const std::vector<unsigned int>& frequencies,
 }
 
 void redraw_subfunctions(const std::vector<unsigned int>& frequencies,
-                         const std::function<double(double)> fun,
+                         const std::vector<std::function<double(double)>>& functions,
                          const ALLEGRO_COLOR color,
                          const float thickness)
 {
     // Draw the individual functions.
     for (size_t i = 0; i < frequencies.size(); ++i) {
         std::vector<double> function_values =
-            std::move(calculate_function(fun,
+            std::move(calculate_function([&](double x){
+                                             return -functions[i](x);
+                                         },
                                          0, 2*M_PI,
                                          SUBFUNCTION_WIDTH,
                                          frequencies[i]));
 
+        double max = *std::max_element(function_values.begin(),
+                                       function_values.end());
+        double min = *std::min_element(function_values.begin(),
+                                       function_values.end());
         draw_fuckin_long_ribbon(
             std::move(values_to_points(
                           function_values,
@@ -180,8 +186,8 @@ void redraw_subfunctions(const std::vector<unsigned int>& frequencies,
                           },
                           [=](double y){
                               // Value with a minus because the coordinates are inverted.
-                              return scale_function(-y, SUBFUNCTION_HEIGHT,
-                                                    -1, 1) + SUBFUNCTION_YMARGIN;
+                              return scale_function(y, SUBFUNCTION_HEIGHT,
+                                                    min, max) + SUBFUNCTION_YMARGIN;
                           }))
             .data(),
             sizeof(float)*2, color, thickness, function_values.size());
@@ -201,10 +207,10 @@ void redraw_subfunctions(const std::vector<unsigned int>& frequencies,
 
 void redraw_functions(const std::vector<unsigned int>& frequencies,
                       const std::vector<unsigned int>& random_frequencies,
-                      const std::function<double(double)> fun)
+                      const std::vector<std::function<double(double)>>& functions)
 {
     if (!random_frequencies.empty()) {
-        redraw_combined_function(random_frequencies, fun, RANDOM_FUNCTION_COLOR, 2);
+        redraw_combined_function(random_frequencies, {sin,sin,sin,sin}, RANDOM_FUNCTION_COLOR, 2);
         std::stringstream ss;
         ss << std::accumulate(random_frequencies.begin(), random_frequencies.end(), 1,
                               std::multiplies<unsigned int>());
@@ -227,9 +233,9 @@ void redraw_functions(const std::vector<unsigned int>& frequencies,
                      ss.str().c_str());
     }
 
-    redraw_combined_function(frequencies, fun, FUNCTION_COLOR, 3);
+    redraw_combined_function(frequencies, functions, FUNCTION_COLOR, 3);
 
-    redraw_subfunctions(frequencies, fun, SUBFUNCTION_COLOR, 1);
+    redraw_subfunctions(frequencies, functions, SUBFUNCTION_COLOR, 1);
 }
 
 void redraw_borders(const size_t function_count, const size_t selected)
@@ -299,9 +305,15 @@ int main(int argc, char *argv[])
     al_register_event_source(event_queue, al_get_keyboard_event_source());
     al_register_event_source(event_queue, al_get_display_event_source(display));
 
-    std::vector<unsigned int> frequencies = {1,0,0,0};
-    size_t selected = 0;
     const std::vector<unsigned int> primes = {2,3,5,7};
+    const std::map<int, std::function<double(double)>> keys_to_functions =
+        {{ALLEGRO_KEY_S, sin},
+         {ALLEGRO_KEY_C, cos},
+         {ALLEGRO_KEY_T, tan}};
+
+    std::vector<unsigned int> frequencies = {1,0,0,0};
+    std::vector<std::function<double(double)>> functions = {sin, sin, sin, sin};
+    size_t selected = 0;
     std::vector<unsigned int> random_frequencies;
 
     while (doexit == false) {
@@ -309,7 +321,7 @@ int main(int argc, char *argv[])
         switch (doredraw) {
         case REDRAW_ALL:
             al_clear_to_color(background_color);
-            redraw_functions(frequencies, random_frequencies, sin);
+            redraw_functions(frequencies, random_frequencies, functions);
         case REDRAW_BORDERS:
             redraw_borders(frequencies.size(), selected);
             al_flip_display();
@@ -370,6 +382,11 @@ int main(int argc, char *argv[])
             // quit
             else if (key == ALLEGRO_KEY_Q) {
                 doexit = true;
+            }
+            // select a different function
+            else if (keys_to_functions.count(key) == 1) {
+                doredraw = REDRAW_ALL;
+                functions[selected] = keys_to_functions.find(key)->second;
             }
         }
     }

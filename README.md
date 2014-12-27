@@ -12,6 +12,7 @@ Controls:
 * r: generate and show a random function  
 * R: hide the random function  
 * Ctrl+r: reset the frequencies  
+* s/c/t: change the current function to sin/cos/tan  
 
 DEPENDENCIES
 ------------
