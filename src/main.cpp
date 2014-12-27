@@ -97,6 +97,10 @@ void draw_fuckin_long_ribbon(const float* points, int points_stride,
     al_draw_ribbon(points, points_stride, color, thickness, num_segments);
 }
 
+// Convert a vector of function's y values to a vector of interleaving
+// x and y values, transformed according to the given functions
+// (mainly for scaling). Output intended to be passed directly to the
+// drawing function.
 std::vector<float> values_to_points(const std::vector<double>& values,
                                     std::function<float(double)> x_transform,
                                     std::function<float(double)> y_transform)
@@ -116,6 +120,33 @@ std::vector<float> values_to_points(const std::vector<double>& values,
     return points;
 }
 
+// Draw a function starting in the point (x_start,y_start).
+void draw_function(const std::vector<double> values,
+                   const int x_start, const int y_start,
+                   const int height,
+                   const ALLEGRO_COLOR color,
+                   const float thickness)
+{
+    double combined_max = *std::max_element(values.begin(),
+                                            values.end());
+    double combined_min = *std::min_element(values.begin(),
+                                            values.end());
+
+    draw_fuckin_long_ribbon(
+        std::move(values_to_points(
+                      values,
+                      [=](double x){
+                          return x + x_start;
+                      },
+                      [=](double y){
+                          return scale_function(
+                              y, height,
+                              combined_min, combined_max) + y_start;
+                      }))
+        .data(),
+        sizeof(float)*2, color, thickness, values.size());
+}
+
 void redraw_combined_function(const std::vector<unsigned int>& frequencies,
                               const std::vector<std::function<double(double)>>& functions,
                               const ALLEGRO_COLOR color,
@@ -131,7 +162,7 @@ void redraw_combined_function(const std::vector<unsigned int>& frequencies,
                                frequencies[i]));
     }
     // Values of functions from the previous vectors added together
-    // (like the zip higher order function).
+    // (like the zipWith higher order function in Haskell).
     std::vector<double> combined_values(FUNCTION_WIDTH, 0);
     for (auto& function_values : functions_values) {
         for (size_t i = 0; i < function_values.size(); ++i) {
@@ -139,24 +170,10 @@ void redraw_combined_function(const std::vector<unsigned int>& frequencies,
         }
     }
 
-    double combined_max = *std::max_element(combined_values.begin(),
-                                            combined_values.end());
-    double combined_min = *std::min_element(combined_values.begin(),
-                                            combined_values.end());
-
-    // Draw the combined function.
-    draw_fuckin_long_ribbon(
-        std::move(values_to_points(
-                      combined_values,
-                      [=](double x){
-                          return x + XMARGIN;
-                      },
-                      [=](double y){
-                          return scale_function(y, FUNCTION_HEIGHT,
-                                                combined_min, combined_max) + YMARGIN;
-                      }))
-        .data(),
-        sizeof(float)*2, color, thickness, combined_values.size());
+    draw_function(combined_values,
+                  XMARGIN, YMARGIN,
+                  FUNCTION_HEIGHT,
+                  color, thickness);
 }
 
 void redraw_subfunctions(const std::vector<unsigned int>& frequencies,
@@ -174,24 +191,11 @@ void redraw_subfunctions(const std::vector<unsigned int>& frequencies,
                                          SUBFUNCTION_WIDTH,
                                          frequencies[i]));
 
-        double max = *std::max_element(function_values.begin(),
-                                       function_values.end());
-        double min = *std::min_element(function_values.begin(),
-                                       function_values.end());
-        draw_fuckin_long_ribbon(
-            std::move(values_to_points(
-                          function_values,
-                          [=](double x){
-                              return x + XMARGIN + i*(SUBFUNCTION_WIDTH + SUBFUNCTION_XMARGIN);
-                          },
-                          [=](double y){
-                              // Value with a minus because the coordinates are inverted.
-                              return scale_function(y, SUBFUNCTION_HEIGHT,
-                                                    min, max) + SUBFUNCTION_YMARGIN;
-                          }))
-            .data(),
-            sizeof(float)*2, color, thickness, function_values.size());
-
+        draw_function(function_values,
+                      XMARGIN + i*(SUBFUNCTION_WIDTH + SUBFUNCTION_XMARGIN),
+                      SUBFUNCTION_YMARGIN,
+                      SUBFUNCTION_HEIGHT,
+                      color, thickness);
 
         // Draw a number.
         std::stringstream ss;
