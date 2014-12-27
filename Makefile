@@ -12,7 +12,7 @@ CC       ?= gcc
 CXX      ?= g++
 CFLAGS   ?= -std=$(STD_CC)  -Wall -Wextra
 CXXFLAGS ?= -std=$(STD_CXX) -Wall -Wextra -Weffc++
-LDFLAGS  ?= -lallegro -lallegro_primitives
+LDFLAGS  ?= -lallegro -lallegro_primitives -lallegro_font -lm
 
 # release build
 RELEASE_CC       = $(CC)
