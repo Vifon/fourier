@@ -301,6 +301,7 @@ int main(int argc, char *argv[])
 
     std::vector<unsigned int> frequencies = {1,0,0,0};
     size_t selected = 0;
+    const std::vector<unsigned int> primes = {2,3,5,7};
     std::vector<unsigned int> random_frequencies;
 
     while (doexit == false) {
@@ -353,14 +354,16 @@ int main(int argc, char *argv[])
                 // disable the random function
                 if (ev.keyboard.modifiers & ALLEGRO_KEYMOD_SHIFT) {
                     random_frequencies.clear();
-                } else if (ev.keyboard.modifiers & ALLEGRO_KEYMOD_CTRL) {
+                }
+                // reset the functions
+                else if (ev.keyboard.modifiers & ALLEGRO_KEYMOD_CTRL) {
                     frequencies = {1,0,0,0};
                 }
                 // generate a new random function
                 else {
                     random_frequencies.clear();
                     for (int i = 0; i < frequencies.size(); ++i) {
-                        random_frequencies.push_back(rand() % 9 + 1);
+                        random_frequencies.push_back(primes[rand() % primes.size()]);
                     }
                 }
             }
