@@ -250,6 +250,8 @@ int main(int argc, char *argv[])
     al_init_primitives_addon();
     al_install_keyboard();
     al_set_new_display_flags(ALLEGRO_GENERATE_EXPOSE_EVENTS);
+    al_set_new_display_option(ALLEGRO_SAMPLE_BUFFERS, 1, ALLEGRO_SUGGEST);
+    al_set_new_display_option(ALLEGRO_SAMPLES, 8, ALLEGRO_SUGGEST);
     display = al_create_display(SCREEN_W, SCREEN_H);
     event_queue = al_create_event_queue();
     ALLEGRO_COLOR background_color = al_map_rgb(0x11, 0x11, 0x11);
