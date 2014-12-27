@@ -3,10 +3,15 @@ FOURIER
 
 Visualize a function created by combining 4 sinus functions with the given frequencies.
 
+It was inspired by a minigame in a game "Assassin's Creed IV" ([screenshot](http://i.imgur.com/G8kX8H6.jpg)).
+
 Controls:
 
 * left/right: select the function to modify  
 * 0-9: set the function's frequency  
+* r: generate and show a random function  
+* R: hide the random function  
+* Ctrl+r: reset the frequencies  
 
 DEPENDENCIES
 ------------
