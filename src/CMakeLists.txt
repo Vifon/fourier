@@ -3,4 +3,8 @@ set(fourier_SOURCES
   )
 
 add_executable(fourier ${fourier_SOURCES})
-target_link_libraries(fourier allegro allegro_primitives m)
+target_link_libraries(fourier
+  allegro
+  allegro_font
+  allegro_primitives
+  m)

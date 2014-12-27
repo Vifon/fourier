@@ -18,10 +18,12 @@
 /////////////////////////////////////////////////////////////////////////////////////
 
 #include <allegro5/allegro.h>
+#include <allegro5/allegro_font.h>
 #include <allegro5/allegro_primitives.h>
 
 #include <algorithm>
 #include <functional>
+#include <sstream>
 #include <vector>
 
 #include <cmath>
@@ -35,6 +37,7 @@ const int SCREEN_H =  700;
 ALLEGRO_COLOR FUNCTION_COLOR;
 ALLEGRO_COLOR SUBFUNCTION_COLOR;
 ALLEGRO_COLOR RANDOM_FUNCTION_COLOR;
+ALLEGRO_FONT* font;
 
 
 const int XMARGIN = 60;
@@ -182,6 +185,17 @@ void redraw_subfunctions(const std::vector<unsigned int>& frequencies,
                           }))
             .data(),
             sizeof(float)*2, color, thickness, function_values.size());
+
+
+        // Draw a number.
+        std::stringstream ss;
+        ss << frequencies[i];
+        al_draw_text(font,
+                     SUBFUNCTION_COLOR,
+                     XMARGIN + i*(SUBFUNCTION_WIDTH + SUBFUNCTION_XMARGIN),
+                     SUBFUNCTION_YMARGIN - 15,
+                     ALLEGRO_ALIGN_LEFT,
+                     ss.str().c_str());
     }
 }
 
@@ -191,8 +205,30 @@ void redraw_functions(const std::vector<unsigned int>& frequencies,
 {
     if (!random_frequencies.empty()) {
         redraw_combined_function(random_frequencies, fun, RANDOM_FUNCTION_COLOR, 2);
+        std::stringstream ss;
+        ss << std::accumulate(random_frequencies.begin(), random_frequencies.end(), 1,
+                              std::multiplies<unsigned int>());
+        al_draw_text(font,
+                     RANDOM_FUNCTION_COLOR,
+                     XMARGIN,
+                     YMARGIN/2,
+                     ALLEGRO_ALIGN_LEFT,
+                     ss.str().c_str());
+
+        ss.str("");             // reset the stringstream
+
+        ss << std::accumulate(frequencies.begin(), frequencies.end(), 1,
+                              std::multiplies<unsigned int>());
+        al_draw_text(font,
+                     FUNCTION_COLOR,
+                     XMARGIN + FUNCTION_WIDTH,
+                     YMARGIN/2,
+                     ALLEGRO_ALIGN_RIGHT,
+                     ss.str().c_str());
     }
+
     redraw_combined_function(frequencies, fun, FUNCTION_COLOR, 3);
+
     redraw_subfunctions(frequencies, fun, SUBFUNCTION_COLOR, 1);
 }
 
@@ -247,6 +283,7 @@ int main(int argc, char *argv[])
     redraw_t doredraw = REDRAW_ALL;
 
     al_init();
+    al_init_font_addon();
     al_init_primitives_addon();
     al_install_keyboard();
     al_set_new_display_flags(ALLEGRO_GENERATE_EXPOSE_EVENTS);
@@ -255,6 +292,7 @@ int main(int argc, char *argv[])
     display = al_create_display(SCREEN_W, SCREEN_H);
     event_queue = al_create_event_queue();
     ALLEGRO_COLOR background_color = al_map_rgb(0x11, 0x11, 0x11);
+    font = al_create_builtin_font();
     FUNCTION_COLOR = al_map_rgb(0xFF, 0x00, 0x00);
     SUBFUNCTION_COLOR = al_map_rgb(0xFF, 0x00, 0x00);
     RANDOM_FUNCTION_COLOR = al_map_rgb(0x00, 0xAA, 0xAA);
@@ -335,7 +373,9 @@ int main(int argc, char *argv[])
 
     al_destroy_display(display);
     al_destroy_event_queue(event_queue);
+    al_destroy_font(font);
     al_shutdown_primitives_addon();
+    al_shutdown_font_addon();
 
     return 0;
 }
