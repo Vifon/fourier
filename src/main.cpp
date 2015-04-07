@@ -77,7 +77,7 @@ std::vector<double> calculate_function(const std::function<double(double)> fun,
         combined_values[i++] = fun(x*frequency_multiplier * (range / steps));
     }
 
-    return std::move(combined_values);
+    return combined_values;
 }
 
 
@@ -133,16 +133,16 @@ void draw_function(const std::vector<double> values,
                                    values.end());
 
     draw_fuckin_long_ribbon(
-        std::move(values_to_points(
-                      values,
-                      [=](double x){
-                          return x + x_start;
-                      },
-                      [=](double y){
-                          return scale_function(
-                              y, height,
-                              min, max) + y_start;
-                      }))
+        values_to_points(
+            values,
+            [=](double x){
+                return x + x_start;
+            },
+            [=](double y){
+                return scale_function(
+                    y, height,
+                    min, max) + y_start;
+            })
         .data(),
         sizeof(float)*2, color, thickness, values.size());
 }
@@ -155,11 +155,11 @@ void redraw_combined_function(const std::vector<unsigned int>& frequencies,
     // Vector of vectors with functions' values.
     std::vector<std::vector<double>> functions_values(frequencies.size());
     for (size_t i = 0; i < functions_values.size(); ++i) {
-        functions_values[i] = std::move(
+        functions_values[i] =
             calculate_function(functions[i],
                                0, 2*M_PI,
                                FUNCTION_WIDTH,
-                               frequencies[i]));
+                               frequencies[i]);
     }
     // Values of functions from the previous vectors added together
     // (like the zipWith higher order function in Haskell).
@@ -184,12 +184,12 @@ void redraw_subfunctions(const std::vector<unsigned int>& frequencies,
     // Draw the individual functions.
     for (size_t i = 0; i < frequencies.size(); ++i) {
         std::vector<double> function_values =
-            std::move(calculate_function([&](double x){
-                                             return -functions[i](x);
-                                         },
-                                         0, 2*M_PI,
-                                         SUBFUNCTION_WIDTH,
-                                         frequencies[i]));
+            calculate_function([&](double x){
+                    return -functions[i](x);
+                },
+                0, 2*M_PI,
+                SUBFUNCTION_WIDTH,
+                frequencies[i]);
 
         draw_function(function_values,
                       XMARGIN + i*(SUBFUNCTION_WIDTH + SUBFUNCTION_XMARGIN),
